@@ -42,7 +42,7 @@ function editUser(user) {
 }
 
 // Tutup modal ketika klik area luar
-modal.addEventListener('click', function(event) {
+modal.addEventListener('click', function (event) {
     if (event.target === modal) {
         closeModal();
     }
@@ -94,3 +94,129 @@ function filterUsers() {
 searchInput.addEventListener('input', filterUsers);
 roleFilter.addEventListener('change', filterUsers);
 statusFilter.addEventListener('change', filterUsers);
+
+// VALIDASI FORMULIR PENGGUNA
+(() => {
+    const form = document.querySelector('#userModal form');
+
+    if (!form) return;
+
+    const fields = {
+        id: document.getElementById('userId'),
+        name: document.getElementById('userName'),
+        email: document.getElementById('userEmail'),
+        password: document.getElementById('userPassword'),
+        role: document.getElementById('userRole'),
+        identity: document.getElementById('userIdentity'),
+        phone: document.getElementById('userPhone')
+    };
+
+    const validatedFields = [
+        fields.name,
+        fields.email,
+        fields.password,
+        fields.role,
+        fields.identity,
+        fields.phone
+    ];
+
+    function clearErrors() {
+        validatedFields.forEach((field) => {
+            field.setCustomValidity('');
+        });
+    }
+
+    validatedFields.forEach((field) => {
+        field.addEventListener('input', () => {
+            field.setCustomValidity('');
+        });
+
+        field.addEventListener('change', () => {
+            field.setCustomValidity('');
+        });
+    });
+
+    // Reset pesan validasi ketika membuka formulir tambah.
+    form.addEventListener('reset', clearErrors);
+
+    // Reset juga ketika berpindah dari tambah ke edit atau sebaliknya.
+    const modalElement = document.getElementById('userModal');
+
+    const observer = new MutationObserver(clearErrors);
+
+    observer.observe(modalElement, {
+        attributes: true,
+        attributeFilter: ['class']
+    });
+
+    form.addEventListener('submit', (event) => {
+        clearErrors();
+
+        fields.name.value = fields.name.value.trim();
+        fields.email.value = fields.email.value.trim().toLowerCase();
+        fields.identity.value = fields.identity.value.trim();
+        fields.phone.value = fields.phone.value.trim();
+
+        const isNewUser =
+            fields.id.value === '' ||
+            fields.id.value === '0';
+
+        fields.password.required = isNewUser;
+
+        const nameLength = Array.from(fields.name.value).length;
+
+        if (nameLength < 2 || nameLength > 100) {
+            fields.name.setCustomValidity(
+                'Nama harus terdiri dari 2–100 karakter.'
+            );
+        }
+
+        const allowedRoles = ['admin', 'petugas', 'pelapor'];
+
+        if (!allowedRoles.includes(fields.role.value)) {
+            fields.role.setCustomValidity('Pilih role yang valid.');
+        }
+
+        if (Array.from(fields.identity.value).length > 30) {
+            fields.identity.setCustomValidity(
+                'NIM/NIP maksimal 30 karakter.'
+            );
+        }
+
+        if (
+            fields.phone.value !== '' &&
+            !/^\+?[0-9]{8,15}$/.test(fields.phone.value)
+        ) {
+            fields.phone.setCustomValidity(
+                'Nomor telepon harus berisi 8–15 angka, boleh diawali +.'
+            );
+        }
+
+        // Password tidak di-trim agar nilainya tidak berubah.
+        const password = fields.password.value;
+
+        if (isNewUser && password === '') {
+            fields.password.setCustomValidity(
+                'Password wajib diisi untuk akun baru.'
+            );
+        } else if (password !== '') {
+            const characterCount = Array.from(password).length;
+            const byteCount = new TextEncoder().encode(password).length;
+
+            if (
+                characterCount < 8 ||
+                byteCount > 72 ||
+                password.includes('\0')
+            ) {
+                fields.password.setCustomValidity(
+                    'Password minimal 8 karakter dan maksimal 72 byte.'
+                );
+            }
+        }
+
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            form.reportValidity();
+        }
+    });
+})();
