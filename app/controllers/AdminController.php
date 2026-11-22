@@ -17,6 +17,34 @@ class AdminController extends Controller
     $this->view('admin/dashboard', $data);
 }
 
+    protected function validateCsrf()
+    {
+        $token = $_POST['csrf_token'] ?? '';
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+        if (
+            !is_string($token) ||
+            !is_string($sessionToken) ||
+            $token === '' ||
+            $sessionToken === '' ||
+            !hash_equals($sessionToken, $token)
+        ) {
+            http_response_code(403);
+
+            exit(
+                'Permintaan tidak valid. '
+                . 'Muat ulang halaman dan coba kembali.'
+            );
+        }
+    }
+
+
+    public function dashboard()
+    {
+        // Isi dashboard yang sudah ada tetap dipertahankan.
+    }
+
+
 public function reports()
 {
     $model = new Complaint();
@@ -77,10 +105,16 @@ private function processUserChange($toggleOnly)
 
     // Ambil nilai teks dengan aman.
     $input = static function ($key) {
-        $value = $_POST[$key] ?? '';
+    $value = $_POST[$key] ?? '';
 
-        return is_string($value) ? trim($value) : '';
-    };
+    if (!is_string($value)) {
+        throw new DomainException(
+            'Format data tidak valid. Muat ulang halaman dan coba kembali.'
+        );
+    }
+
+    return trim($value);
+};
 
     try {
         $rawId = $input('id');
